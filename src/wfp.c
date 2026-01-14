@@ -971,7 +971,7 @@ BOOLEAN _wfp_createrulefilter (
 	_In_ HANDLE engine_handle,
 	_In_ ENUM_TYPE_DATA filter_type,
 	_In_opt_ LPCWSTR filter_name,
-	_In_opt_ ULONG app_hash,
+	_In_opt_ ULONG_PTR app_hash,
 	_In_opt_ PITEM_FILTER_CONFIG filter_config,
 	_In_opt_ PR_STRINGREF rule_remote,
 	_In_opt_ PR_STRINGREF rule_local,
@@ -1392,7 +1392,7 @@ BOOLEAN _wfp_create4filters (
 	LPGUID guid;
 	PITEM_RULE ptr_rule;
 	ULONG_PTR enum_key;
-	ULONG hash_code;
+	ULONG_PTR hash_code;
 	BOOLEAN is_enabled;
 
 	if (_r_obj_isempty (rules))

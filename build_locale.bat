@@ -1,6 +1,6 @@
 @echo off
 
-cd ..\builder
+cd builder
 call build_locale simplewall
 
 pause

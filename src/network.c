@@ -81,7 +81,7 @@ VOID _app_network_generatetable (
 	IN_ADDR remote_addr;
 	IN_ADDR local_addr;
 	PVOID buffer;
-	ULONG network_hash;
+	ULONG_PTR network_hash;
 	ULONG allocated_size;
 	ULONG required_size;
 	ULONG status;
@@ -394,7 +394,7 @@ VOID _app_network_generatetable (
 
 _Ret_maybenull_
 PITEM_NETWORK _app_network_getitem (
-	_In_ ULONG network_hash
+	_In_ ULONG_PTR network_hash
 )
 {
 	PITEM_NETWORK_CONTEXT network_context;
@@ -414,7 +414,7 @@ PITEM_NETWORK _app_network_getitem (
 
 _Success_ (return != 0)
 ULONG _app_network_getappitem (
-	_In_ ULONG network_hash
+	_In_ ULONG_PTR network_hash
 )
 {
 	PITEM_NETWORK ptr_network;
@@ -432,7 +432,7 @@ ULONG _app_network_getappitem (
 	return hash_code;
 }
 
-ULONG _app_network_gethash (
+ULONG_PTR _app_network_gethash (
 	_In_ ADDRESS_FAMILY af,
 	_In_ ULONG pid,
 	_In_opt_ LPCVOID remote_addr,
@@ -446,7 +446,7 @@ ULONG _app_network_gethash (
 	WCHAR remote_address[LEN_IP_MAX] = {0};
 	WCHAR local_address[LEN_IP_MAX] = {0};
 	PR_STRING network_string;
-	ULONG network_hash;
+	ULONG_PTR network_hash;
 
 	if (remote_addr)
 		_app_formatip (af, remote_addr, remote_address, RTL_NUMBER_OF (remote_address), FALSE);
@@ -602,7 +602,7 @@ BOOLEAN _app_network_isapphaveconnection (
 }
 
 BOOLEAN _app_network_isitemfound (
-	_In_ ULONG network_hash
+	_In_ ULONG_PTR network_hash
 )
 {
 	PITEM_NETWORK_CONTEXT network_context;
@@ -666,7 +666,7 @@ VOID _app_network_printlistviewtable (
 	PR_STRING string;
 	ULONG_PTR enum_key = 0;
 	ULONG_PTR app_hash;
-	ULONG network_hash;
+	ULONG_PTR network_hash;
 	INT item_count;
 	BOOLEAN is_highlight = FALSE;
 	BOOLEAN is_refresh = FALSE;
@@ -711,7 +711,7 @@ VOID _app_network_printlistviewtable (
 
 	for (INT i = item_count - 1; i != INT_ERROR; i--)
 	{
-		network_hash = (ULONG)_app_listview_getitemcontext (network_context->hwnd, IDC_NETWORK, i);
+		network_hash = _app_listview_getitemcontext (network_context->hwnd, IDC_NETWORK, i);
 
 		if (_r_obj_findhashtable (network_context->checker_ptr, network_hash))
 			continue;
@@ -731,7 +731,7 @@ VOID _app_network_printlistviewtable (
 }
 
 VOID _app_network_removeitem (
-	_In_ ULONG network_hash
+	_In_ ULONG_PTR network_hash
 )
 {
 	PITEM_NETWORK_CONTEXT network_context;

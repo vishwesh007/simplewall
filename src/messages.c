@@ -529,7 +529,7 @@ VOID _app_message_contextmenu (
 	HMENU hmenu;
 	PITEM_NETWORK ptr_network;
 	PITEM_APP ptr_app = NULL;
-	ULONG hash_code;
+	ULONG_PTR hash_code;
 	ULONG app_hash;
 	INT listview_id;
 	INT command_id;
@@ -637,7 +637,7 @@ VOID _app_message_contextmenu (
 				_r_obj_movereference ((PVOID_PTR)&localized_string, _r_obj_concatstrings (2, _r_locale_getstring (IDS_DELETE), L"\tDel"));
 				_r_menu_additem (hmenu, IDM_DELETE, localized_string->buffer);
 
-				hash_code = (ULONG)_app_listview_getitemcontext (hwnd, listview_id, lpnmlv->iItem);
+				hash_code = _app_listview_getitemcontext (hwnd, listview_id, lpnmlv->iItem);
 
 				if (_app_getruleinfobyid (hash_code, INFO_IS_READONLY, &is_readonly, sizeof (BOOLEAN)))
 				{
@@ -709,7 +709,7 @@ VOID _app_message_contextmenu (
 				_r_obj_dereference (column_text);
 			}
 
-			hash_code = (ULONG)_app_listview_getitemcontext (hwnd, listview_id, lpnmlv->iItem);
+			hash_code = _app_listview_getitemcontext (hwnd, listview_id, lpnmlv->iItem);
 
 			ptr_network = _app_network_getitem (hash_code);
 
@@ -2159,7 +2159,7 @@ VOID _app_command_checkbox (
 	PITEM_RULE ptr_rule;
 	PR_LIST rules;
 	HANDLE hengine;
-	ULONG hash_code;
+	ULONG_PTR hash_code;
 	INT item_id = INT_ERROR;
 	BOOLEAN new_val = (ctrl_id == IDM_CHECK);
 	BOOLEAN is_changed = FALSE;
@@ -2175,7 +2175,7 @@ VOID _app_command_checkbox (
 	{
 		while ((item_id = _r_listview_getnextselected (hwnd, tab_context->listview_id, item_id)) != INT_ERROR)
 		{
-			hash_code = (ULONG)_app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
+			hash_code = _app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
 			ptr_app = _app_getappitem (hash_code);
 
 			if (!ptr_app)
@@ -2224,7 +2224,7 @@ VOID _app_command_checkbox (
 	{
 		while ((item_id = _r_listview_getnextselected (hwnd, tab_context->listview_id, item_id)) != INT_ERROR)
 		{
-			hash_code = (ULONG)_app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
+			hash_code = _app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
 			ptr_rule = _app_getrulebyid (hash_code);
 
 			if (!ptr_rule)
@@ -2288,7 +2288,7 @@ VOID _app_command_delete (
 	PITEM_RULE ptr_rule;
 	ULONG_PTR rule_idx;
 	ULONG_PTR enum_key;
-	ULONG hash_code;
+	ULONG_PTR hash_code;
 	INT selected_count;
 	LPARAM lparam;
 	INT item_count;
@@ -2367,7 +2367,7 @@ VOID _app_command_delete (
 
 		if (tab_context->listview_id == IDC_APPS_PROFILE)
 		{
-			hash_code = (ULONG)_app_listview_getitemcontext (hwnd, tab_context->listview_id, i);
+			hash_code = _app_listview_getitemcontext (hwnd, tab_context->listview_id, i);
 			ptr_app = _app_getappitem (hash_code);
 
 			if (!ptr_app)
@@ -2432,7 +2432,7 @@ VOID _app_command_delete (
 		}
 		else if (tab_context->listview_id == IDC_NETWORK)
 		{
-			hash_code = (ULONG)_app_listview_getitemcontext (hwnd, tab_context->listview_id, i);
+			hash_code = _app_listview_getitemcontext (hwnd, tab_context->listview_id, i);
 			ptr_network = _app_network_getitem (hash_code);
 
 			if (!ptr_network)
@@ -2549,7 +2549,7 @@ VOID _app_command_openeditor (
 	PITEM_LOG ptr_log;
 	PR_STRING string;
 	ULONG_PTR id_code;
-	ULONG hash_code;
+	ULONG_PTR hash_code;
 	INT item_id = INT_ERROR;
 
 	ptr_rule = _app_addrule (NULL, NULL, NULL, FWP_DIRECTION_OUTBOUND, FWP_ACTION_PERMIT, 0, 0);
@@ -2569,7 +2569,7 @@ VOID _app_command_openeditor (
 		{
 			while ((item_id = _r_listview_getnextselected (hwnd, tab_context->listview_id, item_id)) != INT_ERROR)
 			{
-				hash_code = (ULONG)_app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
+				hash_code = _app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
 
 				if (_app_isappfound (hash_code))
 					_r_obj_addhashtableitem (ptr_rule->apps, hash_code, NULL);
@@ -2586,7 +2586,7 @@ VOID _app_command_openeditor (
 
 			if (item_id != INT_ERROR)
 			{
-				hash_code = (ULONG)_app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
+				hash_code = _app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
 				ptr_network = _app_network_getitem (hash_code);
 
 				if (ptr_network)
@@ -2632,7 +2632,7 @@ VOID _app_command_openeditor (
 
 			if (item_id != INT_ERROR)
 			{
-				hash_code = (ULONG)_app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
+				hash_code = _app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
 				ptr_log = _app_getlogitem (hash_code);
 
 				if (ptr_log)
@@ -2706,7 +2706,7 @@ VOID _app_command_properties (
 	PITEM_RULE ptr_rule;
 	PITEM_APP ptr_app;
 	PITEM_LOG ptr_log;
-	ULONG hash_code;
+	ULONG_PTR hash_code;
 	INT item_id;
 
 	tab_context = _app_listview_getcontext (hwnd, INT_ERROR);
@@ -2725,7 +2725,7 @@ VOID _app_command_properties (
 		case IDC_APPS_SERVICE:
 		case IDC_APPS_UWP:
 		{
-			hash_code = (ULONG)_app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
+			hash_code = _app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
 			ptr_app = _app_getappitem (hash_code);
 
 			if (!ptr_app)
@@ -2754,7 +2754,7 @@ VOID _app_command_properties (
 		case IDC_RULES_SYSTEM:
 		case IDC_RULES_CUSTOM:
 		{
-			hash_code = (ULONG)_app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
+			hash_code = _app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
 			ptr_rule = _app_getrulebyid (hash_code);
 
 			if (!ptr_rule)
@@ -2782,7 +2782,7 @@ VOID _app_command_properties (
 
 		case IDC_NETWORK:
 		{
-			hash_code = (ULONG)_app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
+			hash_code = _app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
 			ptr_network = _app_network_getitem (hash_code);
 
 			if (!ptr_network)
@@ -2813,7 +2813,7 @@ VOID _app_command_properties (
 
 		case IDC_LOG:
 		{
-			hash_code = (ULONG)_app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
+			hash_code = _app_listview_getitemcontext (hwnd, tab_context->listview_id, item_id);
 			ptr_log = _app_getlogitem (hash_code);
 
 			if (!ptr_log)
@@ -2855,7 +2855,7 @@ VOID _app_command_purgeunused (
 	PR_ARRAY guids;
 	HANDLE hengine;
 	ULONG_PTR enum_key = 0;
-	ULONG hash_code;
+	ULONG_PTR hash_code;
 
 	apps_list = _r_obj_createhashtable (sizeof (ULONG_PTR), 8, NULL);
 	guids = _r_obj_createarray (sizeof (GUID), 10, NULL);

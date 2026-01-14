@@ -24,6 +24,7 @@
 
 #include "app.h"
 #include "rapp.h"
+#include "routine_shims.h"
 #include "main.h"
 
 #include "resource.h"

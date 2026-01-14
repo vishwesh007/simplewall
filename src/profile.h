@@ -86,7 +86,7 @@ PITEM_RULE_CONFIG _app_addruleconfigtable (
 
 _Ret_maybenull_
 PITEM_APP _app_getappitem (
-	_In_ ULONG app_hash
+	_In_ ULONG_PTR app_hash
 );
 
 _Ret_maybenull_
@@ -101,12 +101,12 @@ PITEM_RULE _app_getrulebyhash (
 
 _Ret_maybenull_
 PITEM_RULE_CONFIG _app_getruleconfigitem (
-	_In_ ULONG rule_hash
+	_In_ ULONG_PTR rule_hash
 );
 
 _Ret_maybenull_
 PITEM_LOG _app_getlogitem (
-	_In_ ULONG log_hash
+	_In_ ULONG_PTR log_hash
 );
 
 _Success_ (return != 0)
@@ -129,7 +129,7 @@ VOID _app_deleteappitem (
 
 VOID _app_freeapplication (
 	_In_opt_ HWND hwnd,
-	_In_ ULONG app_hash
+	_In_ ULONG_PTR app_hash
 );
 
 BOOLEAN _app_isappfromsystem (
@@ -151,7 +151,7 @@ BOOLEAN _app_isappexists (
 );
 
 BOOLEAN _app_isappfound (
-	_In_ ULONG app_hash
+	_In_ ULONG_PTR app_hash
 );
 
 BOOLEAN _app_isappunused (
@@ -163,7 +163,7 @@ BOOLEAN _app_isappused (
 );
 
 BOOLEAN _app_issystemhash (
-	_In_ ULONG app_hash
+	_In_ ULONG_PTR app_hash
 );
 
 VOID _app_getcount (
@@ -207,7 +207,7 @@ VOID _app_ruleremoveapp (
 	_In_opt_ HWND hwnd,
 	_In_ ULONG_PTR item_id,
 	_In_ PITEM_RULE ptr_rule,
-	_In_ ULONG app_hash
+	_In_ ULONG_PTR app_hash
 );
 
 BOOLEAN _app_ruleblocklistsetchange (

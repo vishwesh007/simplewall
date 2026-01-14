@@ -590,7 +590,7 @@ PITEM_RULE_CONFIG _app_addruleconfigtable (
 
 _Ret_maybenull_
 PITEM_APP _app_getappitem (
-	_In_ ULONG app_hash
+	_In_ ULONG_PTR app_hash
 )
 {
 	PITEM_APP ptr_app;
@@ -665,7 +665,7 @@ PITEM_RULE _app_getrulebyhash (
 
 _Ret_maybenull_
 PITEM_RULE_CONFIG _app_getruleconfigitem (
-	_In_ ULONG rule_hash
+	_In_ ULONG_PTR rule_hash
 )
 {
 	PITEM_RULE_CONFIG ptr_rule_config;
@@ -679,7 +679,7 @@ PITEM_RULE_CONFIG _app_getruleconfigitem (
 
 _Ret_maybenull_
 PITEM_LOG _app_getlogitem (
-	_In_ ULONG log_hash
+	_In_ ULONG_PTR log_hash
 )
 {
 	PITEM_LOG ptr_log;
@@ -818,7 +818,7 @@ VOID _app_deleteappitem (
 
 VOID _app_freeapplication (
 	_In_opt_ HWND hwnd,
-	_In_ ULONG app_hash
+	_In_ ULONG_PTR app_hash
 )
 {
 	PITEM_RULE ptr_rule;
@@ -954,7 +954,7 @@ VOID _app_setruleiteminfo (
 )
 {
 	ULONG_PTR enum_key = 0;
-	ULONG hash_code;
+	ULONG_PTR hash_code;
 
 	_r_listview_setitem (hwnd, listview_id, item_id, 0, LPSTR_TEXTCALLBACK, I_IMAGECALLBACK, I_GROUPIDCALLBACK, I_DEFAULT);
 
@@ -1012,7 +1012,7 @@ VOID _app_ruleremoveapp (
 	_In_opt_ HWND hwnd,
 	_In_ ULONG_PTR item_id,
 	_In_ PITEM_RULE ptr_rule,
-	_In_ ULONG app_hash
+	_In_ ULONG_PTR app_hash
 )
 {
 	if (!ptr_rule->apps)
@@ -1219,7 +1219,7 @@ PR_STRING _app_rulesexpandapps (
 	PITEM_APP ptr_app;
 	PR_STRING string;
 	ULONG_PTR enum_key = 0;
-	ULONG hash_code;
+	ULONG_PTR hash_code;
 
 	_r_obj_initializestringbuilder (&sr, 256);
 
@@ -1462,7 +1462,7 @@ BOOLEAN _app_isappexists (
 }
 
 BOOLEAN _app_isappfound (
-	_In_ ULONG app_hash
+	_In_ ULONG_PTR app_hash
 )
 {
 	BOOLEAN is_found;
@@ -1504,7 +1504,7 @@ BOOLEAN _app_isappused (
 }
 
 BOOLEAN _app_issystemhash (
-	_In_ ULONG app_hash
+	_In_ ULONG_PTR app_hash
 )
 {
 	return (app_hash == config.ntoskrnl_hash || app_hash == config.svchost_hash);

@@ -171,7 +171,7 @@ VOID _app_listview_addruleitem (
 
 VOID _app_listview_addnetworkitem (
 	_In_ HWND hwnd,
-	_In_ ULONG network_hash
+	_In_ ULONG_PTR network_hash
 )
 {
 	_r_listview_additem (hwnd, IDC_NETWORK, INT_ERROR, LPSTR_TEXTCALLBACK, I_IMAGECALLBACK, I_GROUPIDCALLBACK, _app_listview_createcontext (network_hash));

@@ -58,7 +58,7 @@ VOID _app_listview_addruleitem (
 
 VOID _app_listview_addnetworkitem (
 	_In_ HWND hwnd,
-	_In_ ULONG network_hash
+	_In_ ULONG_PTR network_hash
 );
 
 VOID _app_listview_addlogitem (
