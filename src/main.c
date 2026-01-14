@@ -1576,7 +1576,7 @@ INT_PTR CALLBACK SettingsProc (
 					BOOLEAN is_enabled;
 					//BOOLEAN is_logging_enabled;
 
-					is_postmessage = ((INT)lparam == WM_APP);
+					is_postmessage = (lparam == WM_APP);
 					is_enabled = _r_ctrl_isbuttonchecked (hwnd, ctrl_id);
 					//is_logging_enabled = is_enabled || _r_ctrl_isbuttonchecked (hwnd, IDC_ENABLEUILOG_CHK);
 
@@ -2130,7 +2130,7 @@ VOID _app_tabs_init (
 		{
 			_r_listview_setstyle (hwnd, tab_context->listview_id, style, TRUE);
 
-			_r_listview_addcolumn (hwnd, tab_context->listview_id, 0, L"", -10, LVCFMT_LEFT);
+			_r_listview_addcolumn (hwnd, tab_context->listview_id, 0, L"#", -10, LVCFMT_LEFT);
 			_r_listview_addcolumn (hwnd, tab_context->listview_id, 1, L"", -10, LVCFMT_LEFT);
 			_r_listview_addcolumn (hwnd, tab_context->listview_id, 2, L"", -10, LVCFMT_LEFT);
 			_r_listview_addcolumn (hwnd, tab_context->listview_id, 3, L"", -10, LVCFMT_LEFT);
@@ -2141,8 +2141,9 @@ VOID _app_tabs_init (
 			_r_listview_addcolumn (hwnd, tab_context->listview_id, 8, L"", -10, LVCFMT_LEFT);
 			_r_listview_addcolumn (hwnd, tab_context->listview_id, 9, L"", -10, LVCFMT_RIGHT);
 			_r_listview_addcolumn (hwnd, tab_context->listview_id, 10, L"", -10, LVCFMT_LEFT);
+			_r_listview_addcolumn (hwnd, tab_context->listview_id, 11, L"", -10, LVCFMT_LEFT);
 
-			_r_listview_addgroup (hwnd, tab_context->listview_id, 0, L"", 0, LVGS_NOHEADER, LVGS_NOHEADER);
+			_r_listview_addgroup (hwnd, tab_context->listview_id, 0, L"", 0, LVGS_COLLAPSIBLE, LVGS_COLLAPSIBLE);
 		}
 
 		// add filter group
@@ -2366,7 +2367,7 @@ INT_PTR CALLBACK DlgProc (
 			{
 				_r_str_fromlong64 (internal_profile_version, RTL_NUMBER_OF (internal_profile_version), profile_info.profile_internal_timestamp);
 
-				_r_update_addcomponent (L"Internal rules", L"rules_internal", internal_profile_version, profile_info.profile_path_internal, FALSE);
+				_r_update_addcomponent (L"Internal rules", L"rules_internal", internal_profile_version, &profile_info.profile_path_internal->sr, FALSE);
 			}
 
 			_app_network_initialize (hwnd);
@@ -2677,6 +2678,13 @@ INT_PTR CALLBACK DlgProc (
 
 			switch (nmlp->code)
 			{
+				case RBN_HEIGHTCHANGE:
+				{
+					_r_wnd_sendmessage (hwnd, 0, WM_SIZE, 0, 0);
+
+					break;
+				}
+
 				case TCN_SELCHANGING:
 				{
 					PITEM_TAB_CONTEXT tab_context;
@@ -4067,9 +4075,9 @@ BOOLEAN NTAPI _app_parseargs (
 
 		case CmdlineInstall:
 		{
-			if (_r_sys_getopt (_r_sys_getcommandline (), L"silent", NULL) || _app_installmessage (NULL, TRUE))
+			if (_r_sys_getopt (_r_sys_getcommandline ()->buffer, L"silent", NULL) || _app_installmessage (NULL, TRUE))
 			{
-				if (_r_sys_getopt (_r_sys_getcommandline (), L"temp", NULL))
+				if (_r_sys_getopt (_r_sys_getcommandline ()->buffer, L"temp", NULL))
 					config.is_filterstemporary = TRUE;
 
 				_app_profile_initialize ();

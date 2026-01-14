@@ -206,8 +206,8 @@ PR_STRING _app_formatarpa (
 )
 {
 	R_STRINGBUILDER formatted_address;
-	PIN_ADDR p4addr;
 	PIN6_ADDR p6addr;
+	PIN_ADDR p4addr;
 
 	_r_obj_initializestringbuilder (&formatted_address, 256);
 
@@ -264,21 +264,19 @@ PR_STRING _app_formataddress (
 {
 	WCHAR addr_str[DNS_MAX_NAME_BUFFER_LENGTH];
 	R_STRINGBUILDER formatted_address;
-	PR_STRING string;
+	LPCWSTR string;
 	NTSTATUS status;
 
-	_r_obj_initializestringbuilder (&formatted_address, 256);
+	_r_obj_initializestringbuilder (&formatted_address, 0x100);
 
 	if (flags & FMTADDR_USE_PROTOCOL)
 	{
-		string = _app_db_getprotoname (proto, af, FALSE);
+		string = _app_db_getprotoname (proto, af);
 
-		if (string)
+		if (_r_str_compare (string, L"n/a", FALSE) != 0)
 		{
-			_r_obj_appendstringbuilder2 (&formatted_address, &string->sr);
+			_r_obj_appendstringbuilder (&formatted_address, string);
 			_r_obj_appendstringbuilder (&formatted_address, L"://");
-
-			_r_obj_dereference (string);
 		}
 	}
 
@@ -586,21 +584,29 @@ PR_STRING _app_getappdisplayname (
 			return _r_obj_reference (ptr_app->original_path);
 	}
 
-	if (ptr_app->type == DATA_APP_SERVICE)
+	switch (ptr_app->type)
 	{
-		if (!_r_obj_isstringempty (ptr_app->original_path))
-			return _r_obj_reference (ptr_app->original_path);
-	}
-	else if (ptr_app->type == DATA_APP_UWP)
-	{
-		if (!_r_obj_isstringempty (ptr_app->display_name))
-			return _r_obj_reference (ptr_app->display_name);
+		case DATA_APP_SERVICE:
+		{
+			if (!_r_obj_isstringempty (ptr_app->original_path))
+				return _r_obj_reference (ptr_app->original_path);
 
-		if (!_r_obj_isstringempty (ptr_app->real_path))
-			return _r_obj_reference (ptr_app->real_path);
+			break;
+		}
 
-		if (!_r_obj_isstringempty (ptr_app->original_path))
-			return _r_obj_reference (ptr_app->original_path);
+		case DATA_APP_UWP:
+		{
+			if (!_r_obj_isstringempty (ptr_app->display_name))
+				return _r_obj_reference (ptr_app->display_name);
+
+			if (!_r_obj_isstringempty (ptr_app->real_path))
+				return _r_obj_reference (ptr_app->real_path);
+
+			if (!_r_obj_isstringempty (ptr_app->original_path))
+				return _r_obj_reference (ptr_app->original_path);
+
+			break;
+		}
 	}
 
 	if (is_shortened || _r_config_getboolean (L"ShowFilenames", TRUE, NULL))
@@ -616,26 +622,39 @@ PR_STRING _app_getappdisplayname (
 }
 
 _Ret_maybenull_
-PR_STRING _app_getappname (
-	_In_ PITEM_APP ptr_app
+PR_STRING _app_getapppath (
+	_In_ PITEM_APP ptr_app,
+	_In_ BOOLEAN is_returnshort
 )
 {
+	PR_STRING path = NULL;
+	PR_STRING  string;
+
 	if (ptr_app->type == DATA_APP_UWP || ptr_app->type == DATA_APP_SERVICE)
 	{
 		if (ptr_app->real_path)
-			return _r_obj_reference (ptr_app->real_path);
+			path = _r_obj_reference (ptr_app->real_path);
 
 		if (ptr_app->display_name)
-			return _r_obj_reference (ptr_app->display_name);
+			path = _r_obj_reference (ptr_app->display_name);
 	}
 
 	if (ptr_app->original_path)
-		return _r_obj_reference (ptr_app->original_path);
+		path = _r_obj_reference (ptr_app->original_path);
 
 	if (ptr_app->real_path)
-		return _r_obj_reference (ptr_app->real_path);
+		path = _r_obj_reference (ptr_app->real_path);
 
-	return NULL;
+	if (is_returnshort && path)
+	{
+		string = _r_str_environmentunexpandstring (&path->sr);
+
+		_r_obj_movereference ((PVOID_PTR)&path, _r_path_compact (&string->sr, 64));
+
+		_r_obj_dereference (string);
+	}
+
+	return path;
 }
 
 VOID _app_getfileicon (
@@ -1037,14 +1056,7 @@ VOID _app_getfileversioninfo (
 	// get file version
 	if (_r_res_queryversion (ver_block.buffer, (PVOID_PTR)&ver_info))
 	{
-		if (_r_obj_isstringempty2 (sb.string))
-		{
-			_r_obj_appendstringbuilder (&sb, SZ_TAB);
-		}
-		else
-		{
-			_r_obj_appendstringbuilder (&sb, L" ");
-		}
+		_r_obj_appendstringbuilder (&sb, _r_obj_isstringempty2 (sb.string) ? SZ_TAB : L" ");
 
 		_r_obj_appendstringbuilderformat (&sb, L"%d.%d", HIWORD (ver_info->dwFileVersionMS), LOWORD (ver_info->dwFileVersionMS));
 
@@ -1609,8 +1621,8 @@ PR_STRING _app_resolveaddress (
 )
 {
 	PDNS_RECORD dns_records = NULL;
-	PR_STRING arpa_string;
 	PR_STRING string = NULL;
+	PR_STRING arpa_string;
 	DNS_STATUS status;
 	ULONG arpa_hash;
 
@@ -1624,7 +1636,7 @@ PR_STRING _app_resolveaddress (
 		return string;
 	}
 
-	status = DnsQuery_W (arpa_string->buffer, DNS_TYPE_PTR, DNS_QUERY_BYPASS_CACHE | DNS_QUERY_NO_HOSTS_FILE, NULL, &dns_records, NULL);
+	status = DnsQuery_W (arpa_string->buffer, DNS_TYPE_PTR, DNS_QUERY_BYPASS_CACHE | DNS_QUERY_NO_HOSTS_FILE | DNS_QUERY_NO_MULTICAST, NULL, &dns_records, NULL);
 
 	if (status == ERROR_SUCCESS)
 	{

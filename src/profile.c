@@ -567,7 +567,7 @@ PITEM_RULE _app_addrule (
 	ptr_rule->protocol = protocol;
 	ptr_rule->af = af;
 
-	ptr_rule->protocol_str = _app_db_getprotoname (protocol, af, FALSE);
+	ptr_rule->protocol_str = _r_obj_createstring (_app_db_getprotoname (protocol, af));
 
 	return ptr_rule;
 }
@@ -1548,7 +1548,7 @@ VOID _app_profile_initialize ()
 	R_STRINGREF separator_sr = PR_STRINGREF_INIT (L"\\");
 	PR_STRING path;
 
-	path = _r_app_getprofiledirectory ();
+	path = _r_app_getprofiledirectory (TRUE);
 
 	_r_obj_movereference ((PVOID_PTR)&profile_info.profile_path, _r_obj_concatstringrefs (3, &path->sr, &separator_sr, &profile_sr));
 	_r_obj_movereference ((PVOID_PTR)&profile_info.profile_path_backup, _r_obj_concatstringrefs (3, &path->sr, &separator_sr, &profile_bak_sr));
@@ -1709,8 +1709,8 @@ NTSTATUS _app_profile_load (
 )
 {
 	DB_INFORMATION db_info;
-	NTSTATUS status;
 	BOOLEAN is_update;
+	NTSTATUS status;
 
 	status = _app_db_initialize (&db_info, TRUE);
 
@@ -1790,8 +1790,8 @@ NTSTATUS _app_profile_save (
 {
 	DB_INFORMATION db_info;
 	LONG64 timestamp;
-	NTSTATUS status;
 	BOOLEAN is_backuprequired = FALSE;
+	NTSTATUS status;
 
 	status = _app_db_initialize (&db_info, FALSE);
 

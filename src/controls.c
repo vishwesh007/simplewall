@@ -45,6 +45,9 @@ VOID _app_getapptooltipstring (
 			path = ptr_log->path;
 	}
 
+	if (ptr_log)
+		_r_obj_appendstringbuilderformat (buffer, L"#%d - ", _InterlockedCompareExchange (&ptr_log->log_id, 0, 0));
+
 	if (path)
 	{
 		_r_obj_appendstringbuilder2 (buffer, &path->sr);
@@ -333,7 +336,7 @@ PR_STRING _app_gettooltipbylparam (
 
 			_r_obj_appendstringbuilderformat (
 				&sb,
-				L"%s (#%" TEXT (PR_ULONG_PTR) L")\r\n%s (%s):\r\n%s%s\r\n%s (%s):\r\n%s%s",
+				L"%s (#%" TEXT (PR_LONG_PTR) L")\r\n%s (%s):\r\n%s%s\r\n%s (%s):\r\n%s%s",
 				_r_obj_getstringordefault (ptr_rule->name, _r_locale_getstring (IDS_STATUS_EMPTY)),
 				lparam,
 				_r_locale_getstring (IDS_RULE),
@@ -658,7 +661,7 @@ VOID _app_setinterfacestate (
 
 	_r_wnd_seticon (hwnd, hico_sm, hico_big);
 
-	//_r_wnd_sendmessage (hwnd, IDC_STATUSBAR, SB_SETICON, 0, (LPARAM)hico_sm);
+	//_r_status_seticon (hwnd, IDC_STATUSBAR, 0, hico_sm);
 
 	if (!_wfp_isfiltersapplying ())
 		_r_status_settext (hwnd, IDC_STATUSBAR, 0, _app_getstatelocale (install_type));
@@ -965,12 +968,12 @@ VOID _app_toolbar_resize (
 		rbi.cbSize = sizeof (REBARBANDINFOW);
 		rbi.fMask = RBBIM_ID | RBBIM_CHILD | RBBIM_IDEALSIZE | RBBIM_CHILDSIZE;
 
-		if (!_r_wnd_sendmessage (config.hrebar, 0, RB_GETBANDINFO, (WPARAM)i, (LPARAM)&rbi))
+		if (!_r_rebar_getinfo (config.hrebar, 0, i, &rbi))
 			continue;
 
 		if (rbi.wID == REBAR_TOOLBAR_ID)
 		{
-			if (!_r_wnd_sendmessage (config.htoolbar, 0, TB_GETIDEALSIZE, FALSE, (LPARAM)&ideal_size))
+			if (!_r_toolbar_getidealsize (config.htoolbar, 0, FALSE, &ideal_size))
 				continue;
 
 			button_size = _r_toolbar_getbuttonsize (config.hrebar, IDC_TOOLBAR);
@@ -998,7 +1001,7 @@ VOID _app_toolbar_resize (
 			continue;
 		}
 
-		_r_wnd_sendmessage (config.hrebar, 0, RB_SETBANDINFO, (WPARAM)i, (LPARAM)&rbi);
+		_r_rebar_setinfo (config.hrebar, 0, i, &rbi);
 	}
 }
 

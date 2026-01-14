@@ -68,8 +68,8 @@ static const BYTE profile2_fourcc_old[] = {
 #define PROFILE2_SHA256_LENGTH 32UL
 #define PROFILE2_HEADER_LENGTH (PROFILE2_FOURCC_LENGTH + PROFILE2_SHA256_LENGTH)
 
-_Success_ (NT_SUCCESS (return))
-NTSTATUS _app_db_initialize (
+_Success_ (SUCCEEDED (return))
+HRESULT _app_db_initialize (
 	_Out_ PDB_INFORMATION db_info,
 	_In_ BOOLEAN is_reader
 );
@@ -204,11 +204,9 @@ PR_STRING _app_db_getdirectionname (
 	_In_ BOOLEAN is_localized
 );
 
-_Ret_maybenull_
-PR_STRING _app_db_getprotoname (
+LPCWSTR _app_db_getprotoname (
 	_In_ ULONG proto,
-	_In_ ADDRESS_FAMILY af,
-	_In_ BOOLEAN is_notnull
+	_In_ ADDRESS_FAMILY af
 );
 
 _Ret_maybenull_

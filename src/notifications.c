@@ -532,7 +532,7 @@ VOID _app_notify_killprocess (
 
 		if (_r_str_compare (process->ImageName.Buffer, file_name->buffer, TRUE) == 0)
 		{
-			status = _r_sys_getprocessimagepathbyid (process->UniqueProcessId, TRUE, &path);
+			status = _r_sys_getprocessimagepathbyid (HandleToULong (process->UniqueProcessId), TRUE, &path);
 
 			if (NT_SUCCESS (status))
 			{
@@ -542,7 +542,7 @@ VOID _app_notify_killprocess (
 
 					if (NT_SUCCESS (status))
 					{
-						status = _r_sys_terminateprocess (process_handle, STATUS_SUCCESS);
+						status = NtTerminateProcess (process_handle, STATUS_SUCCESS);
 
 						if (!NT_SUCCESS (status))
 							_r_show_errormessage (hwnd, L"Cannot terminate process!", status, file_name->buffer, ET_NATIVE);
