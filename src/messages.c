@@ -906,6 +906,20 @@ VOID _app_message_traycontextmenu (
 	_r_menu_setitemtext (hsubmenu, IDM_TRAY_WEBSITE, FALSE, _r_locale_getstring (IDS_WEBSITE));
 	_r_menu_setitemtext (hsubmenu, IDM_TRAY_ABOUT, FALSE, _r_locale_getstring (IDS_ABOUT));
 	_r_menu_setitemtext (hsubmenu, IDM_TRAY_EXIT, FALSE, _r_locale_getstring (IDS_EXIT));
+
+	// Add schedule menu item dynamically if not in resource
+	if (GetMenuState (hsubmenu, IDM_TRAY_SCHEDULE_CHK, MF_BYCOMMAND) == (UINT)-1)
+	{
+		InsertMenuW (hsubmenu, IDM_TRAY_SETTINGS, MF_BYCOMMAND | MF_STRING, IDM_TRAY_SCHEDULE_CHK, L"Scheduled Blocking");
+		InsertMenuW (hsubmenu, IDM_TRAY_SETTINGS, MF_BYCOMMAND | MF_SEPARATOR, 0, NULL);
+	}
+	else
+	{
+		_r_menu_setitemtext (hsubmenu, IDM_TRAY_SCHEDULE_CHK, FALSE, L"Scheduled Blocking");
+	}
+
+	_r_menu_checkitem (hsubmenu, IDM_TRAY_SCHEDULE_CHK, 0, MF_BYCOMMAND, _r_config_getboolean (L"IsScheduleEnabled", FALSE, NULL));
+
 	_r_menu_checkitem (hsubmenu, IDM_TRAY_ENABLENOTIFICATIONS_CHK, 0, MF_BYCOMMAND, _r_config_getboolean (L"IsNotificationsEnabled", TRUE, NULL));
 	_r_menu_checkitem (hsubmenu, IDM_TRAY_ENABLENOTIFICATIONSSOUND_CHK, 0, MF_BYCOMMAND, _r_config_getboolean (L"IsNotificationsSound", TRUE, NULL));
 	_r_menu_checkitem (hsubmenu, IDM_TRAY_NOTIFICATIONFULLSCREENSILENTMODE_CHK, 0, MF_BYCOMMAND, _r_config_getboolean (L"IsNotificationsFullscreenSilentMode", TRUE, NULL));

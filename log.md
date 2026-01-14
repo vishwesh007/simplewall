@@ -155,3 +155,40 @@ origin    https://github.com/vishwesh007/simplewall.git (your fork)
 upstream  https://github.com/henrypp/simplewall.git (main repository)
 ```
 
+---
+
+### Feature: Scheduled Firewall Blocking (Time-Based Hardening)
+
+Implemented automatic firewall hardening based on time schedules. Users can now configure a time window during which ALL network connections are blocked.
+
+**Files modified:**
+- `src/resource.h` - Added new dialog ID (IDD_SETTINGS_SCHEDULE), control IDs (IDC_ENABLESCHEDULE_CHK, IDC_SCHEDULE_START_HOUR, etc.), menu ID (IDM_TRAY_SCHEDULE_CHK), and string IDs
+- `src/main.h` - Added `hschedule_timer` and `is_schedule_active` to STATIC_DATA structure
+- `src/timer.h` - Added schedule function declarations
+- `src/timer.c` - Implemented schedule logic:
+  - `_app_schedule_init()` - Initialize schedule timer
+  - `_app_schedule_destroy()` - Clean up schedule timer
+  - `_app_schedule_isenabled()` - Check if scheduling is enabled
+  - `_app_schedule_isactive()` - Check if currently in blocking period
+  - `_app_schedule_gettimeuntilnextevent()` - Calculate seconds until next state change
+  - `_app_schedule_apply()` - Apply or remove blocking
+  - `_app_schedule_callback()` - Timer callback for state transitions
+- `src/main.c` - Added settings page, control handlers, tray menu handler
+- `src/messages.c` - Added tray menu item for quick toggle
+
+**How it works:**
+1. Enable scheduled blocking in Settings > Schedule
+2. Set start time (when blocking begins) and end time (when blocking ends)
+3. The firewall will automatically destroy all filters during the scheduled period
+4. Normal operation resumes when the scheduled period ends
+5. Works correctly across midnight (e.g., 23:00 to 07:00)
+
+**Configuration options:**
+- `IsScheduleEnabled` (boolean) - Enable/disable the feature
+- `ScheduleStartHour` (0-23) - Hour when blocking starts
+- `ScheduleStartMin` (0-59) - Minute when blocking starts
+- `ScheduleEndHour` (0-23) - Hour when blocking ends
+- `ScheduleEndMin` (0-59) - Minute when blocking ends
+
+**Default schedule:** 00:00 (midnight) to 07:00 (7 AM)
+

@@ -784,6 +784,37 @@ INT_PTR CALLBACK SettingsProc (
 					break;
 				}
 
+				case IDD_SETTINGS_SCHEDULE:
+				{
+					LONG start_hour;
+					LONG start_min;
+					LONG end_hour;
+					LONG end_min;
+
+					_r_ctrl_checkbutton (hwnd, IDC_ENABLESCHEDULE_CHK, _r_config_getboolean (L"IsScheduleEnabled", FALSE, NULL));
+
+					start_hour = _r_config_getlong (L"ScheduleStartHour", 0, NULL);
+					start_min = _r_config_getlong (L"ScheduleStartMin", 0, NULL);
+					end_hour = _r_config_getlong (L"ScheduleEndHour", 7, NULL);
+					end_min = _r_config_getlong (L"ScheduleEndMin", 0, NULL);
+
+					_r_updown_setrange (hwnd, IDC_SCHEDULE_START_HOUR, 0, 23);
+					_r_updown_setvalue (hwnd, IDC_SCHEDULE_START_HOUR, start_hour);
+
+					_r_updown_setrange (hwnd, IDC_SCHEDULE_START_MIN, 0, 59);
+					_r_updown_setvalue (hwnd, IDC_SCHEDULE_START_MIN, start_min);
+
+					_r_updown_setrange (hwnd, IDC_SCHEDULE_END_HOUR, 0, 23);
+					_r_updown_setvalue (hwnd, IDC_SCHEDULE_END_HOUR, end_hour);
+
+					_r_updown_setrange (hwnd, IDC_SCHEDULE_END_MIN, 0, 59);
+					_r_updown_setvalue (hwnd, IDC_SCHEDULE_END_MIN, end_min);
+
+					_r_ctrl_sendcommand (hwnd, IDC_ENABLESCHEDULE_CHK, WM_APP);
+
+					break;
+				}
+
 				break;
 			}
 
@@ -1155,6 +1186,29 @@ INT_PTR CALLBACK SettingsProc (
 						_r_locale_getstring (IDS_TITLE_EXCLUDE),
 						_r_locale_getstring (IDS_EXCLUDECLASSIFYALLOW_CHK)
 					);
+
+					break;
+				}
+
+				case IDD_SETTINGS_SCHEDULE:
+				{
+					_r_ctrl_setstringformat (
+						hwnd,
+						IDC_TITLE_SCHEDULE,
+						L"%s:",
+						L"Scheduled Blocking"
+					);
+
+					_r_ctrl_setstring (hwnd, IDC_ENABLESCHEDULE_CHK, L"Enable scheduled firewall blocking");
+					_r_ctrl_setstring (hwnd, IDC_SCHEDULE_START_HINT, L"Block start time (HH:MM):");
+					_r_ctrl_setstring (hwnd, IDC_SCHEDULE_END_HINT, L"Block end time (HH:MM):");
+
+					if (_app_schedule_isactive ())
+						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"Status: Blocking is currently ACTIVE");
+					else if (_app_schedule_isenabled ())
+						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"Status: Scheduled (waiting for start time)");
+					else
+						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"Status: Disabled");
 
 					break;
 				}
@@ -1821,6 +1875,73 @@ INT_PTR CALLBACK SettingsProc (
 					_r_config_setboolean (L"IsExcludeCustomRules", _r_ctrl_isbuttonchecked (hwnd, ctrl_id), NULL);
 					break;
 				}
+
+				case IDC_ENABLESCHEDULE_CHK:
+				{
+					BOOLEAN is_postmessage;
+					BOOLEAN is_enabled;
+
+					is_postmessage = ((INT)lparam == WM_APP);
+					is_enabled = _r_ctrl_isbuttonchecked (hwnd, ctrl_id);
+
+					if (!is_postmessage)
+					{
+						_r_config_setboolean (L"IsScheduleEnabled", is_enabled, NULL);
+
+						// Reinitialize schedule
+						if (is_enabled)
+							_app_schedule_init ();
+						else
+							_app_schedule_destroy ();
+					}
+
+					// Enable/disable the time controls
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_START_HOUR, is_enabled);
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_START_MIN, is_enabled);
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_END_HOUR, is_enabled);
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_END_MIN, is_enabled);
+
+					// Update status text
+					if (_app_schedule_isactive ())
+						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"Status: Blocking is currently ACTIVE");
+					else if (is_enabled)
+						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"Status: Scheduled (waiting for start time)");
+					else
+						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"Status: Disabled");
+
+					break;
+				}
+
+				case IDC_SCHEDULE_START_HOUR:
+				case IDC_SCHEDULE_START_MIN:
+				case IDC_SCHEDULE_END_HOUR:
+				case IDC_SCHEDULE_END_MIN:
+				{
+					LONG value;
+
+					if (notify_code != EN_KILLFOCUS)
+						break;
+
+					value = _r_updown_getvalue (hwnd, ctrl_id);
+
+					if (ctrl_id == IDC_SCHEDULE_START_HOUR)
+						_r_config_setlong (L"ScheduleStartHour", value, NULL);
+					else if (ctrl_id == IDC_SCHEDULE_START_MIN)
+						_r_config_setlong (L"ScheduleStartMin", value, NULL);
+					else if (ctrl_id == IDC_SCHEDULE_END_HOUR)
+						_r_config_setlong (L"ScheduleEndHour", value, NULL);
+					else if (ctrl_id == IDC_SCHEDULE_END_MIN)
+						_r_config_setlong (L"ScheduleEndMin", value, NULL);
+
+					// Reinitialize schedule with new times
+					if (_app_schedule_isenabled ())
+					{
+						_app_schedule_destroy ();
+						_app_schedule_init ();
+					}
+
+					break;
+				}
 			}
 
 			break;
@@ -2238,6 +2359,7 @@ INT_PTR CALLBACK DlgProc (
 			_r_settings_addpage (IDD_SETTINGS_NOTIFICATIONS, IDS_TITLE_NOTIFICATIONS);
 			_r_settings_addpage (IDD_SETTINGS_LOGGING, IDS_TITLE_LOGGING);
 			_r_settings_addpage (IDD_SETTINGS_EXCLUDE, IDS_TITLE_EXCLUDE);
+			_r_settings_addpage (IDD_SETTINGS_SCHEDULE, IDS_SCHEDULE);
 
 			// add blocklist to update
 			if (!_r_config_getboolean (L"IsInternalRulesDisabled", FALSE, NULL))
@@ -2253,6 +2375,9 @@ INT_PTR CALLBACK DlgProc (
 			_app_settab_id (hwnd, _r_config_getlong (L"CurrentTab", IDC_APPS_PROFILE, NULL));
 
 			_app_fileloggingenable ();
+
+			// Initialize scheduled blocking
+			_app_schedule_init ();
 
 			break;
 		}
@@ -3128,6 +3253,22 @@ INT_PTR CALLBACK DlgProc (
 				case IDM_TRAY_EXIT:
 				{
 					_r_wnd_sendmessage (hwnd, 0, WM_CLOSE, 0, 0);
+					break;
+				}
+
+				case IDM_TRAY_SCHEDULE_CHK:
+				{
+					BOOLEAN is_enabled;
+
+					is_enabled = !_app_schedule_isenabled ();
+
+					_r_config_setboolean (L"IsScheduleEnabled", is_enabled, NULL);
+
+					if (is_enabled)
+						_app_schedule_init ();
+					else
+						_app_schedule_destroy ();
+
 					break;
 				}
 

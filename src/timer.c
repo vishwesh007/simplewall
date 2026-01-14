@@ -193,3 +193,261 @@ VOID CALLBACK _app_timer_callback (
 	if (status == S_OK || status == S_FALSE)
 		CoUninitialize ();
 }
+
+//
+// Schedule functions for time-based firewall hardening
+//
+
+VOID _app_schedule_init ()
+{
+	BOOLEAN is_enabled;
+	LONG seconds_until_event;
+
+	is_enabled = _app_schedule_isenabled ();
+
+	if (!is_enabled)
+		return;
+
+	// Check if we should currently be blocking
+	config.is_schedule_active = _app_schedule_isactive ();
+
+	// If schedule is currently active, apply blocking
+	if (config.is_schedule_active)
+		_app_schedule_apply (TRUE);
+
+	// Set timer for next state change
+	seconds_until_event = _app_schedule_gettimeuntilnextevent ();
+
+	if (seconds_until_event > 0)
+	{
+		PTP_TIMER htimer;
+		FILETIME file_time;
+		LARGE_INTEGER li;
+		LONG64 current_time;
+		NTSTATUS status;
+
+		current_time = _r_unixtime_now ();
+
+		_r_unixtime_to_filetime (current_time + seconds_until_event, &file_time);
+
+		_r_calc_filetime2largeinteger (&file_time, &li);
+
+		if (config.hschedule_timer)
+		{
+			TpSetTimer (config.hschedule_timer, &li, 0, 0);
+		}
+		else
+		{
+			status = TpAllocTimer (&htimer, &_app_schedule_callback, NULL, NULL);
+
+			if (NT_SUCCESS (status))
+			{
+				TpSetTimer (htimer, &li, 0, 0);
+				config.hschedule_timer = htimer;
+			}
+		}
+	}
+}
+
+VOID _app_schedule_destroy ()
+{
+	PTP_TIMER current_timer;
+
+	current_timer = config.hschedule_timer;
+	config.hschedule_timer = NULL;
+
+	if (current_timer)
+		TpReleaseTimer (current_timer);
+
+	// If schedule was active, restore normal operation
+	if (config.is_schedule_active)
+	{
+		config.is_schedule_active = FALSE;
+		_app_schedule_apply (FALSE);
+	}
+}
+
+BOOLEAN _app_schedule_isenabled ()
+{
+	return _r_config_getboolean (L"IsScheduleEnabled", FALSE, NULL);
+}
+
+BOOLEAN _app_schedule_isactive ()
+{
+	SYSTEMTIME st;
+	LONG start_hour;
+	LONG start_min;
+	LONG end_hour;
+	LONG end_min;
+	LONG current_minutes;
+	LONG start_minutes;
+	LONG end_minutes;
+
+	if (!_app_schedule_isenabled ())
+		return FALSE;
+
+	GetLocalTime (&st);
+
+	start_hour = _r_config_getlong (L"ScheduleStartHour", 0, NULL);
+	start_min = _r_config_getlong (L"ScheduleStartMin", 0, NULL);
+	end_hour = _r_config_getlong (L"ScheduleEndHour", 7, NULL);
+	end_min = _r_config_getlong (L"ScheduleEndMin", 0, NULL);
+
+	current_minutes = st.wHour * 60 + st.wMinute;
+	start_minutes = start_hour * 60 + start_min;
+	end_minutes = end_hour * 60 + end_min;
+
+	// Handle case where end time is before start time (spans midnight)
+	if (end_minutes <= start_minutes)
+	{
+		// Schedule spans midnight (e.g., 23:00 to 07:00)
+		return (current_minutes >= start_minutes || current_minutes < end_minutes);
+	}
+	else
+	{
+		// Normal case (e.g., 09:00 to 17:00)
+		return (current_minutes >= start_minutes && current_minutes < end_minutes);
+	}
+}
+
+LONG _app_schedule_gettimeuntilnextevent ()
+{
+	SYSTEMTIME st;
+	LONG start_hour;
+	LONG start_min;
+	LONG end_hour;
+	LONG end_min;
+	LONG current_minutes;
+	LONG start_minutes;
+	LONG end_minutes;
+	LONG next_event_minutes;
+	LONG minutes_until_event;
+	BOOLEAN is_currently_active;
+
+	GetLocalTime (&st);
+
+	start_hour = _r_config_getlong (L"ScheduleStartHour", 0, NULL);
+	start_min = _r_config_getlong (L"ScheduleStartMin", 0, NULL);
+	end_hour = _r_config_getlong (L"ScheduleEndHour", 7, NULL);
+	end_min = _r_config_getlong (L"ScheduleEndMin", 0, NULL);
+
+	current_minutes = st.wHour * 60 + st.wMinute;
+	start_minutes = start_hour * 60 + start_min;
+	end_minutes = end_hour * 60 + end_min;
+
+	is_currently_active = _app_schedule_isactive ();
+
+	if (is_currently_active)
+	{
+		// Currently blocking, find when to unblock
+		next_event_minutes = end_minutes;
+	}
+	else
+	{
+		// Currently not blocking, find when to start blocking
+		next_event_minutes = start_minutes;
+	}
+
+	if (next_event_minutes > current_minutes)
+	{
+		minutes_until_event = next_event_minutes - current_minutes;
+	}
+	else
+	{
+		// Next event is tomorrow
+		minutes_until_event = (24 * 60 - current_minutes) + next_event_minutes;
+	}
+
+	// Convert to seconds and subtract current seconds within minute for accuracy
+	return (minutes_until_event * 60) - st.wSecond;
+}
+
+VOID _app_schedule_apply (
+	_In_ BOOLEAN is_block
+)
+{
+	HANDLE hengine;
+	HWND hwnd;
+
+	hwnd = _r_app_gethwnd ();
+	hengine = _wfp_getenginehandle ();
+
+	if (!hengine)
+		return;
+
+	if (is_block)
+	{
+		// Destroy all filters (block everything)
+		_wfp_destroyfilters (hengine);
+
+		// Show tray notification
+		if (_r_config_getboolean (L"IsNotificationsEnabled", TRUE, NULL))
+		{
+			ULONG icon_id = NIIF_INFO;
+
+			if (!_r_config_getboolean (L"IsNotificationsSound", TRUE, NULL))
+				icon_id |= NIIF_NOSOUND;
+
+			_r_tray_popup (
+				hwnd,
+				&GUID_TrayIcon,
+				icon_id,
+				_r_app_getname (),
+				L"Scheduled blocking activated - all connections blocked"
+			);
+		}
+	}
+	else
+	{
+		// Reinstall filters (restore normal operation)
+		_wfp_installfilters (hengine);
+
+		// Show tray notification
+		if (_r_config_getboolean (L"IsNotificationsEnabled", TRUE, NULL))
+		{
+			ULONG icon_id = NIIF_INFO;
+
+			if (!_r_config_getboolean (L"IsNotificationsSound", TRUE, NULL))
+				icon_id |= NIIF_NOSOUND;
+
+			_r_tray_popup (
+				hwnd,
+				&GUID_TrayIcon,
+				icon_id,
+				_r_app_getname (),
+				L"Scheduled blocking deactivated - normal operation restored"
+			);
+		}
+	}
+
+	// Update tray icon to reflect state
+	_app_settrayicon (hwnd, _wfp_getinstalltype ());
+}
+
+VOID CALLBACK _app_schedule_callback (
+	_Inout_ PTP_CALLBACK_INSTANCE instance,
+	_Inout_opt_ PVOID context,
+	_Inout_ PTP_TIMER timer
+)
+{
+	BOOLEAN should_block;
+	HRESULT status;
+
+	status = CoInitializeEx (NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+
+	// Determine if we should now be blocking or not
+	should_block = _app_schedule_isactive ();
+
+	// Only take action if state has changed
+	if (should_block != config.is_schedule_active)
+	{
+		config.is_schedule_active = should_block;
+		_app_schedule_apply (should_block);
+	}
+
+	// Reschedule timer for next event
+	_app_schedule_init ();
+
+	if (status == S_OK || status == S_FALSE)
+		CoUninitialize ();
+}

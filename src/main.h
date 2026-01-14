@@ -239,6 +239,10 @@ typedef struct _STATIC_DATA
 	BOOLEAN is_notifytimeout;
 	BOOLEAN is_notifymouse;
 	BOOLEAN is_neteventset;
+
+	// Scheduled blocking
+	volatile PTP_TIMER hschedule_timer;
+	volatile BOOLEAN is_schedule_active;  // TRUE when currently in blocked time
 } STATIC_DATA, *PSTATIC_DATA;
 
 typedef struct _PROFILE_DATA

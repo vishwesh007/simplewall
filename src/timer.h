@@ -29,3 +29,24 @@ VOID CALLBACK _app_timer_callback (
 	_Inout_opt_ PVOID context,
 	_Inout_ PTP_TIMER timer
 );
+
+// Schedule functions
+VOID _app_schedule_init ();
+
+VOID _app_schedule_destroy ();
+
+BOOLEAN _app_schedule_isenabled ();
+
+BOOLEAN _app_schedule_isactive ();
+
+LONG _app_schedule_gettimeuntilnextevent ();
+
+VOID _app_schedule_apply (
+	_In_ BOOLEAN is_block
+);
+
+VOID CALLBACK _app_schedule_callback (
+	_Inout_ PTP_CALLBACK_INSTANCE instance,
+	_Inout_opt_ PVOID context,
+	_Inout_ PTP_TIMER timer
+);
