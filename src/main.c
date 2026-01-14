@@ -790,6 +790,7 @@ INT_PTR CALLBACK SettingsProc (
 					LONG start_min;
 					LONG end_hour;
 					LONG end_min;
+					LONG block_mode;
 
 					_r_ctrl_checkbutton (hwnd, IDC_ENABLESCHEDULE_CHK, _r_config_getboolean (L"IsScheduleEnabled", FALSE, NULL));
 
@@ -798,17 +799,33 @@ INT_PTR CALLBACK SettingsProc (
 					end_hour = _r_config_getlong (L"ScheduleEndHour", 7, NULL);
 					end_min = _r_config_getlong (L"ScheduleEndMin", 0, NULL);
 
-					_r_updown_setrange (hwnd, IDC_SCHEDULE_START_HOUR, 0, 23);
-					_r_updown_setvalue (hwnd, IDC_SCHEDULE_START_HOUR, start_hour);
+					_r_updown_setrange (hwnd, IDC_SCHEDULE_START_HOUR_UD, 0, 23);
+					_r_updown_setvalue (hwnd, IDC_SCHEDULE_START_HOUR_UD, start_hour);
 
-					_r_updown_setrange (hwnd, IDC_SCHEDULE_START_MIN, 0, 59);
-					_r_updown_setvalue (hwnd, IDC_SCHEDULE_START_MIN, start_min);
+					_r_updown_setrange (hwnd, IDC_SCHEDULE_START_MIN_UD, 0, 59);
+					_r_updown_setvalue (hwnd, IDC_SCHEDULE_START_MIN_UD, start_min);
 
-					_r_updown_setrange (hwnd, IDC_SCHEDULE_END_HOUR, 0, 23);
-					_r_updown_setvalue (hwnd, IDC_SCHEDULE_END_HOUR, end_hour);
+					_r_updown_setrange (hwnd, IDC_SCHEDULE_END_HOUR_UD, 0, 23);
+					_r_updown_setvalue (hwnd, IDC_SCHEDULE_END_HOUR_UD, end_hour);
 
-					_r_updown_setrange (hwnd, IDC_SCHEDULE_END_MIN, 0, 59);
-					_r_updown_setvalue (hwnd, IDC_SCHEDULE_END_MIN, end_min);
+					_r_updown_setrange (hwnd, IDC_SCHEDULE_END_MIN_UD, 0, 59);
+					_r_updown_setvalue (hwnd, IDC_SCHEDULE_END_MIN_UD, end_min);
+
+					// Day of week checkboxes (default all enabled)
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_DAY_MON, _r_config_getboolean (L"ScheduleDayMon", TRUE, NULL));
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_DAY_TUE, _r_config_getboolean (L"ScheduleDayTue", TRUE, NULL));
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_DAY_WED, _r_config_getboolean (L"ScheduleDayWed", TRUE, NULL));
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_DAY_THU, _r_config_getboolean (L"ScheduleDayThu", TRUE, NULL));
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_DAY_FRI, _r_config_getboolean (L"ScheduleDayFri", TRUE, NULL));
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_DAY_SAT, _r_config_getboolean (L"ScheduleDaySat", TRUE, NULL));
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_DAY_SUN, _r_config_getboolean (L"ScheduleDaySun", TRUE, NULL));
+
+					// Blocking mode radio buttons (default = block all)
+					block_mode = _r_config_getlong (L"ScheduleBlockMode", 0, NULL);
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_MODE_ALL, block_mode == 0);
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_MODE_OUTBOUND, block_mode == 1);
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_MODE_INBOUND, block_mode == 2);
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_MODE_CUSTOM, block_mode == 3);
 
 					_r_ctrl_sendcommand (hwnd, IDC_ENABLESCHEDULE_CHK, WM_APP);
 
@@ -1192,6 +1209,9 @@ INT_PTR CALLBACK SettingsProc (
 
 				case IDD_SETTINGS_SCHEDULE:
 				{
+					WCHAR next_event_text[128];
+					LONG seconds_until;
+
 					_r_ctrl_setstringformat (
 						hwnd,
 						IDC_TITLE_SCHEDULE,
@@ -1200,15 +1220,37 @@ INT_PTR CALLBACK SettingsProc (
 					);
 
 					_r_ctrl_setstring (hwnd, IDC_ENABLESCHEDULE_CHK, L"Enable scheduled firewall blocking");
-					_r_ctrl_setstring (hwnd, IDC_SCHEDULE_START_HINT, L"Block start time (HH:MM):");
-					_r_ctrl_setstring (hwnd, IDC_SCHEDULE_END_HINT, L"Block end time (HH:MM):");
+					_r_ctrl_setstring (hwnd, IDC_SCHEDULE_START_HINT, L"Start time:");
+					_r_ctrl_setstring (hwnd, IDC_SCHEDULE_END_HINT, L"End time:");
 
+					// Update status based on current state
 					if (_app_schedule_isactive ())
-						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"Status: Blocking is currently ACTIVE");
+						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"\x26D4 Status: BLOCKING ACTIVE");
 					else if (_app_schedule_isenabled ())
-						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"Status: Scheduled (waiting for start time)");
+						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"\x2705 Status: Scheduled (waiting)");
 					else
-						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"Status: Disabled");
+						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"\x274C Status: Disabled");
+
+					// Show next event time
+					if (_app_schedule_isenabled ())
+					{
+						seconds_until = _app_schedule_gettimeuntilnextevent ();
+						if (seconds_until > 0)
+						{
+							_r_str_printf (
+								next_event_text,
+								RTL_NUMBER_OF (next_event_text),
+								L"Next: %d hr %d min",
+								seconds_until / 3600,
+								(seconds_until % 3600) / 60
+							);
+							_r_ctrl_setstring (hwnd, IDC_SCHEDULE_NEXT_EVENT, next_event_text);
+						}
+					}
+					else
+					{
+						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_NEXT_EVENT, L"");
+					}
 
 					break;
 				}
@@ -1901,13 +1943,32 @@ INT_PTR CALLBACK SettingsProc (
 					_r_ctrl_enable (hwnd, IDC_SCHEDULE_END_HOUR, is_enabled);
 					_r_ctrl_enable (hwnd, IDC_SCHEDULE_END_MIN, is_enabled);
 
+					// Enable/disable day checkboxes
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_DAY_MON, is_enabled);
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_DAY_TUE, is_enabled);
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_DAY_WED, is_enabled);
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_DAY_THU, is_enabled);
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_DAY_FRI, is_enabled);
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_DAY_SAT, is_enabled);
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_DAY_SUN, is_enabled);
+
+					// Enable/disable mode radio buttons
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_MODE_ALL, is_enabled);
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_MODE_OUTBOUND, is_enabled);
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_MODE_INBOUND, is_enabled);
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_MODE_CUSTOM, is_enabled);
+
+					// Enable/disable action buttons
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_APPLY_BTN, is_enabled);
+					_r_ctrl_enable (hwnd, IDC_SCHEDULE_RESET_BTN, is_enabled);
+
 					// Update status text
 					if (_app_schedule_isactive ())
-						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"Status: Blocking is currently ACTIVE");
+						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"\x26D4 Status: BLOCKING ACTIVE");
 					else if (is_enabled)
-						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"Status: Scheduled (waiting for start time)");
+						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"\x2705 Status: Scheduled (waiting)");
 					else
-						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"Status: Disabled");
+						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"\x274C Status: Disabled");
 
 					break;
 				}
@@ -1940,6 +2001,135 @@ INT_PTR CALLBACK SettingsProc (
 						_app_schedule_init ();
 					}
 
+					break;
+				}
+
+				// Day of week checkboxes
+				case IDC_SCHEDULE_DAY_MON:
+				{
+					_r_config_setboolean (L"ScheduleDayMon", _r_ctrl_isbuttonchecked (hwnd, ctrl_id), NULL);
+					break;
+				}
+
+				case IDC_SCHEDULE_DAY_TUE:
+				{
+					_r_config_setboolean (L"ScheduleDayTue", _r_ctrl_isbuttonchecked (hwnd, ctrl_id), NULL);
+					break;
+				}
+
+				case IDC_SCHEDULE_DAY_WED:
+				{
+					_r_config_setboolean (L"ScheduleDayWed", _r_ctrl_isbuttonchecked (hwnd, ctrl_id), NULL);
+					break;
+				}
+
+				case IDC_SCHEDULE_DAY_THU:
+				{
+					_r_config_setboolean (L"ScheduleDayThu", _r_ctrl_isbuttonchecked (hwnd, ctrl_id), NULL);
+					break;
+				}
+
+				case IDC_SCHEDULE_DAY_FRI:
+				{
+					_r_config_setboolean (L"ScheduleDayFri", _r_ctrl_isbuttonchecked (hwnd, ctrl_id), NULL);
+					break;
+				}
+
+				case IDC_SCHEDULE_DAY_SAT:
+				{
+					_r_config_setboolean (L"ScheduleDaySat", _r_ctrl_isbuttonchecked (hwnd, ctrl_id), NULL);
+					break;
+				}
+
+				case IDC_SCHEDULE_DAY_SUN:
+				{
+					_r_config_setboolean (L"ScheduleDaySun", _r_ctrl_isbuttonchecked (hwnd, ctrl_id), NULL);
+					break;
+				}
+
+				// Blocking mode radio buttons
+				case IDC_SCHEDULE_MODE_ALL:
+				{
+					_r_config_setlong (L"ScheduleBlockMode", 0, NULL);
+					break;
+				}
+
+				case IDC_SCHEDULE_MODE_OUTBOUND:
+				{
+					_r_config_setlong (L"ScheduleBlockMode", 1, NULL);
+					break;
+				}
+
+				case IDC_SCHEDULE_MODE_INBOUND:
+				{
+					_r_config_setlong (L"ScheduleBlockMode", 2, NULL);
+					break;
+				}
+
+				case IDC_SCHEDULE_MODE_CUSTOM:
+				{
+					_r_config_setlong (L"ScheduleBlockMode", 3, NULL);
+					break;
+				}
+
+				// Action buttons
+				case IDC_SCHEDULE_APPLY_BTN:
+				{
+					// Manually apply blocking now
+					if (!config.is_schedule_active)
+					{
+						config.is_schedule_active = TRUE;
+						_app_schedule_apply (TRUE);
+						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"\x26D4 Status: BLOCKING ACTIVE (manual)");
+					}
+					else
+					{
+						config.is_schedule_active = FALSE;
+						_app_schedule_apply (FALSE);
+						_r_ctrl_setstring (hwnd, IDC_SCHEDULE_STATUS, L"\x2705 Status: Normal operation");
+					}
+					break;
+				}
+
+				case IDC_SCHEDULE_RESET_BTN:
+				{
+					// Reset to defaults
+					_r_config_setlong (L"ScheduleStartHour", 0, NULL);
+					_r_config_setlong (L"ScheduleStartMin", 0, NULL);
+					_r_config_setlong (L"ScheduleEndHour", 7, NULL);
+					_r_config_setlong (L"ScheduleEndMin", 0, NULL);
+					_r_config_setlong (L"ScheduleBlockMode", 0, NULL);
+					_r_config_setboolean (L"ScheduleDayMon", TRUE, NULL);
+					_r_config_setboolean (L"ScheduleDayTue", TRUE, NULL);
+					_r_config_setboolean (L"ScheduleDayWed", TRUE, NULL);
+					_r_config_setboolean (L"ScheduleDayThu", TRUE, NULL);
+					_r_config_setboolean (L"ScheduleDayFri", TRUE, NULL);
+					_r_config_setboolean (L"ScheduleDaySat", TRUE, NULL);
+					_r_config_setboolean (L"ScheduleDaySun", TRUE, NULL);
+
+					// Update UI
+					_r_updown_setvalue (hwnd, IDC_SCHEDULE_START_HOUR_UD, 0);
+					_r_updown_setvalue (hwnd, IDC_SCHEDULE_START_MIN_UD, 0);
+					_r_updown_setvalue (hwnd, IDC_SCHEDULE_END_HOUR_UD, 7);
+					_r_updown_setvalue (hwnd, IDC_SCHEDULE_END_MIN_UD, 0);
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_DAY_MON, TRUE);
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_DAY_TUE, TRUE);
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_DAY_WED, TRUE);
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_DAY_THU, TRUE);
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_DAY_FRI, TRUE);
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_DAY_SAT, TRUE);
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_DAY_SUN, TRUE);
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_MODE_ALL, TRUE);
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_MODE_OUTBOUND, FALSE);
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_MODE_INBOUND, FALSE);
+					_r_ctrl_checkbutton (hwnd, IDC_SCHEDULE_MODE_CUSTOM, FALSE);
+
+					// Reinitialize schedule
+					if (_app_schedule_isenabled ())
+					{
+						_app_schedule_destroy ();
+						_app_schedule_init ();
+					}
 					break;
 				}
 			}

@@ -37,6 +37,12 @@ VOID _app_schedule_destroy ();
 
 BOOLEAN _app_schedule_isenabled ();
 
+BOOLEAN _app_schedule_isdayactive (
+	_In_ WORD day_of_week
+);
+
+LONG _app_schedule_getmode ();
+
 BOOLEAN _app_schedule_isactive ();
 
 LONG _app_schedule_gettimeuntilnextevent ();

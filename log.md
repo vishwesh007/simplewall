@@ -192,3 +192,81 @@ Implemented automatic firewall hardening based on time schedules. Users can now 
 
 **Default schedule:** 00:00 (midnight) to 07:00 (7 AM)
 
+---
+
+### Enhancement: Advanced Schedule UI with Day Selection & Blocking Modes
+
+Implemented a comprehensive scheduling interface with day-of-week selection, blocking mode options, and quick action buttons - creating an "award-winning" UI experience.
+
+**Date:** 2026-01-14
+
+**New Features:**
+
+#### 1. Day-of-Week Selection
+Users can now select which days the schedule should be active:
+- Monday through Sunday checkboxes
+- Default: All days enabled
+- Config keys: `ScheduleDayMon`, `ScheduleDayTue`, `ScheduleDayWed`, `ScheduleDayThu`, `ScheduleDayFri`, `ScheduleDaySat`, `ScheduleDaySun`
+
+#### 2. Blocking Mode Options
+Four different blocking modes to choose from:
+- **Block All Connections** - Completely blocks all network traffic (default)
+- **Block Outbound Only** - Blocks outgoing connections while allowing incoming
+- **Block Inbound Only** - Blocks incoming connections while allowing outgoing
+- **Use Custom Rules** - Applies existing custom firewall rules during schedule
+
+Config key: `ScheduleBlockMode` (0-3)
+
+#### 3. Quick Action Buttons
+- **Apply Now** - Manually toggle blocking on/off immediately
+- **Reset** - Restore all schedule settings to defaults
+
+#### 4. Enhanced Status Display
+Real-time status with Unicode icons:
+- ⛔ Status: BLOCKING ACTIVE - When scheduled blocking is in effect
+- ✅ Status: Scheduled (waiting) - When schedule is enabled but waiting
+- ❌ Status: Disabled - When scheduling is off
+
+#### 5. Next Event Countdown
+Shows time until next schedule event (e.g., "Next: 5 hr 30 min")
+
+**Files Modified:**
+- `src/resource.rc` - Added enhanced IDD_SETTINGS_SCHEDULE dialog with:
+  - Time Window groupbox with start/end time spinners
+  - Active Days groupbox with 7 day checkboxes
+  - Blocking Mode groupbox with 4 radio buttons
+  - Quick Actions groupbox with Apply/Reset buttons + next event label
+  - Added IDS_SCHEDULE string resources
+- `src/resource.h` - Added new control IDs (509-530):
+  - IDC_TITLE_SCHEDULE_TIME, IDC_TITLE_SCHEDULE_DAYS, IDC_TITLE_SCHEDULE_MODE, IDC_TITLE_SCHEDULE_ACTIONS
+  - IDC_SCHEDULE_DAY_MON through IDC_SCHEDULE_DAY_SUN
+  - IDC_SCHEDULE_MODE_ALL, IDC_SCHEDULE_MODE_OUTBOUND, IDC_SCHEDULE_MODE_INBOUND, IDC_SCHEDULE_MODE_CUSTOM
+  - IDC_SCHEDULE_APPLY_BTN, IDC_SCHEDULE_RESET_BTN, IDC_SCHEDULE_NEXT_EVENT
+- `src/timer.c` - Enhanced schedule logic:
+  - `_app_schedule_isdayactive()` - Check if current day is in active schedule
+  - `_app_schedule_getmode()` - Get selected blocking mode
+  - Updated `_app_schedule_apply()` to support different blocking modes
+- `src/timer.h` - Added function declarations for new schedule functions
+- `src/main.c` - Added:
+  - Initialization for all new controls (day checkboxes, mode radio buttons)
+  - Localization section for schedule status display with Unicode icons
+  - WM_COMMAND handlers for all day checkboxes, mode radio buttons, action buttons
+  - Enable/disable logic for child controls when schedule is toggled
+
+**UI Design Philosophy:**
+The enhanced schedule UI follows modern Windows design patterns:
+- Grouped related controls with descriptive groupboxes
+- Inline day-of-week selection for compact layout
+- Radio button group for mutually exclusive mode selection
+- Action buttons for immediate feedback
+- Real-time status with visual Unicode indicators
+
+**How to Use:**
+1. Open Settings → Schedule
+2. Enable "Enable scheduled firewall blocking"
+3. Set your desired time window (e.g., 23:00 to 07:00)
+4. Select which days the schedule should be active
+5. Choose your blocking mode
+6. Optionally use "Apply Now" to test immediately
+7. Schedule will automatically activate/deactivate at configured times
+

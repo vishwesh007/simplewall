@@ -272,6 +272,35 @@ BOOLEAN _app_schedule_isenabled ()
 	return _r_config_getboolean (L"IsScheduleEnabled", FALSE, NULL);
 }
 
+BOOLEAN _app_schedule_isdayactive (
+	_In_ WORD day_of_week
+)
+{
+	// Check if the specific day is enabled in schedule
+	// day_of_week: 0=Sunday, 1=Monday, ... 6=Saturday
+	LPCWSTR day_configs[] = {
+		L"ScheduleDaySun",
+		L"ScheduleDayMon",
+		L"ScheduleDayTue",
+		L"ScheduleDayWed",
+		L"ScheduleDayThu",
+		L"ScheduleDayFri",
+		L"ScheduleDaySat"
+	};
+
+	if (day_of_week > 6)
+		return FALSE;
+
+	// Default: all days enabled
+	return _r_config_getboolean (day_configs[day_of_week], TRUE, NULL);
+}
+
+LONG _app_schedule_getmode ()
+{
+	// 0 = Block all, 1 = Block outbound only, 2 = Block inbound only, 3 = Custom rules
+	return _r_config_getlong (L"ScheduleBlockMode", 0, NULL);
+}
+
 BOOLEAN _app_schedule_isactive ()
 {
 	SYSTEMTIME st;
@@ -282,11 +311,16 @@ BOOLEAN _app_schedule_isactive ()
 	LONG current_minutes;
 	LONG start_minutes;
 	LONG end_minutes;
+	BOOLEAN is_time_match;
 
 	if (!_app_schedule_isenabled ())
 		return FALSE;
 
 	GetLocalTime (&st);
+
+	// Check if today is an active day
+	if (!_app_schedule_isdayactive (st.wDayOfWeek))
+		return FALSE;
 
 	start_hour = _r_config_getlong (L"ScheduleStartHour", 0, NULL);
 	start_min = _r_config_getlong (L"ScheduleStartMin", 0, NULL);
@@ -301,13 +335,15 @@ BOOLEAN _app_schedule_isactive ()
 	if (end_minutes <= start_minutes)
 	{
 		// Schedule spans midnight (e.g., 23:00 to 07:00)
-		return (current_minutes >= start_minutes || current_minutes < end_minutes);
+		is_time_match = (current_minutes >= start_minutes || current_minutes < end_minutes);
 	}
 	else
 	{
 		// Normal case (e.g., 09:00 to 17:00)
-		return (current_minutes >= start_minutes && current_minutes < end_minutes);
+		is_time_match = (current_minutes >= start_minutes && current_minutes < end_minutes);
 	}
+
+	return is_time_match;
 }
 
 LONG _app_schedule_gettimeuntilnextevent ()
@@ -368,6 +404,8 @@ VOID _app_schedule_apply (
 {
 	HANDLE hengine;
 	HWND hwnd;
+	LONG block_mode;
+	LPCWSTR notification_msg;
 
 	hwnd = _r_app_gethwnd ();
 	hengine = _wfp_getenginehandle ();
@@ -375,10 +413,38 @@ VOID _app_schedule_apply (
 	if (!hengine)
 		return;
 
+	block_mode = _app_schedule_getmode ();
+
 	if (is_block)
 	{
-		// Destroy all filters (block everything)
-		_wfp_destroyfilters (hengine);
+		switch (block_mode)
+		{
+			case 0: // Block all
+				_wfp_destroyfilters (hengine);
+				notification_msg = L"Scheduled blocking activated - ALL connections blocked";
+				break;
+
+			case 1: // Block outbound only
+				_r_config_setboolean (L"BlockOutboundConnections", TRUE, NULL);
+				_wfp_installfilters (hengine);
+				notification_msg = L"Scheduled blocking activated - OUTBOUND blocked";
+				break;
+
+			case 2: // Block inbound only
+				_r_config_setboolean (L"BlockInboundConnections", TRUE, NULL);
+				_wfp_installfilters (hengine);
+				notification_msg = L"Scheduled blocking activated - INBOUND blocked";
+				break;
+
+			case 3: // Custom rules - just notify, user handles rules
+				notification_msg = L"Scheduled blocking period started - custom rules active";
+				break;
+
+			default:
+				_wfp_destroyfilters (hengine);
+				notification_msg = L"Scheduled blocking activated";
+				break;
+		}
 
 		// Show tray notification
 		if (_r_config_getboolean (L"IsNotificationsEnabled", TRUE, NULL))
@@ -393,7 +459,7 @@ VOID _app_schedule_apply (
 				&GUID_TrayIcon,
 				icon_id,
 				_r_app_getname (),
-				L"Scheduled blocking activated - all connections blocked"
+				notification_msg
 			);
 		}
 	}
